@@ -1,5 +1,6 @@
 import {execFile, spawnSync} from 'node:child_process';
 import {execDetached} from './proc.js';
+export {freezeSession} from './attach.js';
 import {rawWrite, SYNC_ON} from './terminal.js';
 import {config, statePath, LEGACY_DIR} from './config.js';
 import {readFileSync, writeFileSync, renameSync, existsSync, rmSync, readdirSync, statSync, openSync, readSync, closeSync} from 'node:fs';

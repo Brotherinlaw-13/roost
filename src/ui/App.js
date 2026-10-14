@@ -276,7 +276,12 @@ export function App({services, initial = {}}) {
   // back into the session; → again, or ←, closes the pane. Leaving the session
   // closes it too. The session comes back at once and narrows when the pane
   // appears.
-  const closeSidePane = () => (services.hasPanes?.() ? services.closeAllPanes() : Promise.resolve());
+  // The session is frozen while the pane opens or closes (see freezeSession).
+  const frozen = async work => {
+    services.freezeSession?.(true);
+    try { return await work(); } finally { services.freezeSession?.(false); }
+  };
+  const closeSidePane = () => (services.hasPanes?.() ? frozen(() => services.closeAllPanes()) : Promise.resolve());
   const panesOpen = async () => {
     await services.prunePanes?.();
     return !!services.hasPanes?.();
@@ -284,7 +289,7 @@ export function App({services, initial = {}}) {
   const toggleSidePane = async id => {
     if (await panesOpen()) { closeSidePane(); return; }
     const s = ordered.find(x => x.id === id);
-    services.openPane(id, s ? `card · ${s.name}` : 'card');
+    frozen(() => services.openPane(id, s ? `card · ${s.name}` : 'card'));
   };
 
   // "open <id>" from the desktop pet. Inside another session, leave it and go

@@ -40,6 +40,16 @@ export function cancelAttach() {
   try { current?.kill('SIGTERM'); } catch {}
 }
 
+// While the card pane opens or closes, the session is frozen: what it paints
+// is held and size changes are not passed on (iTerm splits at 50% and then
+// sets 40%), so it redraws once instead of on every step.
+// Unfrozen, it gets the final size once (and repaints), or the held output if
+// the size did not change.
+let freezer = null;
+export function freezeSession(on) {
+  freezer?.(on);
+}
+
 // attach says why it leaves just before it does: "ECARD:" for →, "Detached…"
 // for ← or ctrl+z.
 const DETACH_MSG = /\x1b_cc-detach-msg;([^\x1b]*)/;
@@ -121,6 +131,7 @@ export function attachProxied(pty, cmd, args, {env, cwd, stdin = process.stdin, 
       [s, pending] = splitPartial(pending + chunk);
       if (!s) return;
       if (phase === 'leaving') return keepEscapes(s);
+      if (frozen && phase === 'live' && !s.includes(ALT_OFF)) { heldOutput += s; return; }
       if (phase === 'enter' && sinceAlt < 0) {
         const i = s.indexOf(ALT_ON);
         if (i < 0) return keepEscapes(s);
@@ -153,9 +164,21 @@ export function attachProxied(pty, cmd, args, {env, cwd, stdin = process.stdin, 
       }
       p.write(s);
     };
-    const onResize = () => {
+    let frozen = false;
+    let heldOutput = '';
+    let sizeAtFreeze = null;
+    const applySize = () => {
       p.resize(stdout.columns || 120, stdout.rows || 40);
       screen?.resize(stdout.columns || 120, stdout.rows || 40);
+    };
+    const onResize = () => { if (!frozen) applySize(); };
+    freezer = on => {
+      if (on === frozen) return;
+      frozen = on;
+      if (on) { sizeAtFreeze = `${stdout.columns}x${stdout.rows}`; heldOutput = ''; return; }
+      const held = heldOutput;
+      heldOutput = '';
+      if (`${stdout.columns}x${stdout.rows}` !== sizeAtFreeze) applySize(); else if (held) rawWrite(held);
     };
     stdin.setRawMode?.(true);
     stdin.on('data', onKey);
@@ -164,6 +187,7 @@ export function attachProxied(pty, cmd, args, {env, cwd, stdin = process.stdin, 
 
     p.onExit(({exitCode}) => {
       if (current === p) current = null;
+      freezer = null;
       clearTimeout(quiet);
       clearTimeout(hard);
       stdin.removeListener('data', onKey);
