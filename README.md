@@ -119,6 +119,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |
 | `dispatchGroups` | `{}` | group for a session started from the pet, by issue type: `{"Bug": "Bugs", "*": "Working on"}` |
 | `launchPermissionMode` | `""` | permission mode for sessions roost starts or resumes, e.g. `"acceptEdits"`; empty = Claude Code asks as usual. ⚠️ With `"bypassPermissions"`, a ticket link dropped on the pet starts a session that acts on that ticket's text without asking: a ticket written with bad intent could make Claude run commands. Use it only if you trust every ticket you drop. |
+| `animations` | `true` | small animations, e.g. the card sliding into its pane |
 | `pet` | `false` | set by `roost pet` |
 
 A session's ticket is the `[KEY-123]` tag in its name, else the first key in

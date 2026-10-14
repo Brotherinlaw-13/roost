@@ -48,6 +48,8 @@ export const DEFAULTS = {
   // Inside a session → (empty input) shows the card in a pane beside it (iTerm2).
   // paneKey adds another key for it, e.g. 'ctrl+]'; empty = arrows only.
   paneKey: '',
+  // Small animations, e.g. the card sliding into its pane.
+  animations: true,
   // The desktop pet (macOS); build it with `roost pet`.
   pet: false,
   // When a session opens from a launch link (roost pet), the group it goes in by issue type: {"Bug": "Bugs", "*": "Working on"}.

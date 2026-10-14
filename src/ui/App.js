@@ -67,6 +67,23 @@ function useGhostPose() {
   return pose;
 }
 
+// How far off to the right the card still is: 1 (hidden) until it has data,
+// then down to 0 over ~230 ms with an ease-out (Ink paints ~30 frames a second).
+// Always 0 when turned off.
+const SLIDE_FRAMES = 7;
+const SLIDE_MS = 33;
+function useSlideIn(enabled, ready) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    if (!enabled || !ready || frame >= SLIDE_FRAMES) return undefined;
+    const t = setTimeout(() => setFrame(f => f + 1), SLIDE_MS);
+    return () => clearTimeout(t);
+  }, [enabled, ready, frame]);
+  if (!enabled) return 0;
+  if (!ready) return 1;
+  return (1 - frame / SLIDE_FRAMES) ** 3;
+}
+
 export function App({services, initial = {}}) {
   const {exit} = useApp();
   const {stdout} = useStdout();
@@ -566,6 +583,7 @@ export function App({services, initial = {}}) {
   // header 4 + blank 1 + rule, prompt, rule, status 4, and one spare line so the
   // frame never reaches the last row (that scrolls it).
   const room = paneId ? Math.max(4, rows - 3) : Math.max(4, rows - 10);
+  const slide = useSlideIn(!!paneId && initial.animations !== false, !!cardModel);
 
   let body;
   if (mode === 'group') {
@@ -647,10 +665,14 @@ export function App({services, initial = {}}) {
   }
 
   if (paneId) {
+    // The card slides in from the right edge, like a drawer.
+    const offset = Math.round(cols * slide);
     return html`<${Box} flexDirection="column" height=${rows - 1} width=${cols}>
-      <${Box} flexDirection="column" flexGrow=${1}>${body}<//>
-      <${Rule} cols=${cols} />
-      <${Text} dimColor wrap="truncate">↑↓ move · enter unfold / open PR · o browser · → or esc close<//>
+      <${Box} flexDirection="column" height=${rows - 1} marginLeft=${offset} width=${cols - offset} overflowX="hidden">
+        <${Box} flexDirection="column" flexGrow=${1} width=${cols}>${body}<//>
+        <${Rule} cols=${cols} />
+        <${Text} dimColor wrap="truncate">↑↓ move · enter unfold / open PR · o browser · → or esc close<//>
+      <//>
     <//>`;
   }
 
