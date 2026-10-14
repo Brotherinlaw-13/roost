@@ -14,7 +14,7 @@ const TOOLS = join(HOME, '.claude', 'tools');
 const CLAUDE = process.env.ROOST_CLAUDE || 'claude';
 const WRAPPER = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'attach-wrapper.sh');
 const RETURN_FILE = join(tmpdir(), `roost-return-${process.pid}`);
-const DISPATCH_FLAGS = ['--permission-mode', 'bypassPermissions'];
+
 
 // Children never get roost's own variables: `claude --bg` or `agents` may boot
 // the daemon, and the daemon passes its environment on to every session.
@@ -143,15 +143,17 @@ const parseId = out => /attach ([0-9a-f]{8})/.exec(out)?.[1] || null;
 // New sessions always start in ~, never in the folder roost was launched from:
 // a session started inside another ticket's worktree inherits the wrong cwd.
 // `ticket start` creates the right worktree from there.
+const launchFlags = () => (config().launchPermissionMode ? ['--permission-mode', config().launchPermissionMode] : []);
+
 export async function dispatch(prompt, group) {
-  const out = await run(CLAUDE, ['--bg', ...DISPATCH_FLAGS, prompt], {cwd: HOME});
+  const out = await run(CLAUDE, ['--bg', ...launchFlags(), prompt], {cwd: HOME});
   const id = parseId(out);
   if (id && group) await setGroup(id, group);
   return id;
 }
 
 export async function resume(sessionId, cwd) {
-  const out = await run(CLAUDE, ['--bg', ...DISPATCH_FLAGS, '--resume', sessionId],
+  const out = await run(CLAUDE, ['--bg', ...launchFlags(), '--resume', sessionId],
     {cwd: cwd && existsSync(cwd) ? cwd : HOME});
   return parseId(out);
 }

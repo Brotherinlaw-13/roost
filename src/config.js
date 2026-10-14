@@ -17,7 +17,8 @@ const LEGACY_FILES = ['seen.json', 'muted.json', 'my-prs.json', 'jira-cache.json
 
 function ensureState() {
   if (existsSync(STATE)) return;
-  mkdirSync(STATE, {recursive: true});
+  // Only you: the folder holds the socket the desktop pet talks to.
+  mkdirSync(STATE, {recursive: true, mode: 0o700});
   if (process.env.ROOST_HOME) return;
   for (const f of LEGACY_FILES) {
     try { cpSync(join(LEGACY, f), join(STATE, f), {recursive: true}); } catch {}
@@ -51,6 +52,9 @@ export const DEFAULTS = {
   pet: false,
   // When a session opens from a launch link (roost pet), the group it goes in by issue type: {"Bug": "Bugs", "*": "Working on"}.
   dispatchGroups: {},
+  // Permission mode for sessions roost starts or resumes, e.g. 'acceptEdits' or
+  // 'bypassPermissions'; empty = Claude Code's own default (it asks).
+  launchPermissionMode: '',
   // Extra environment variables that get roost's pid while a session is open,
   // for a patched Claude Code that looks for another name.
   parentPidEnv: [],

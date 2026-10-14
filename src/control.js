@@ -40,7 +40,7 @@ function request(path, line) {
 // is told to let go; and every roost re-checks now and then, so when the
 // owner quits another open roost picks the socket up.
 export async function listen(onOpen) {
-  mkdirSync(dirname(SOCKET), {recursive: true});
+  mkdirSync(dirname(SOCKET), {recursive: true, mode: 0o700});
   let server = null;
   const release = () => {
     if (!server) return;

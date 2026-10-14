@@ -107,6 +107,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `paneKey` | `""` | an extra key for the card pane besides `→`, e.g. `"ctrl+]"` |
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |
 | `dispatchGroups` | `{}` | group for a session started from the pet, by issue type: `{"Bug": "Bugs", "*": "Working on"}` |
+| `launchPermissionMode` | `""` | permission mode for sessions roost starts or resumes, e.g. `"acceptEdits"`; empty = Claude Code asks as usual |
 | `pet` | `false` | set by `roost pet` |
 
 A session's ticket is the `[KEY-123]` tag in its name, else the first key in
