@@ -1,0 +1,7 @@
+node_modules/
+.venv/
+pet/*.app
+pet/.frames.dom
+pet/sprite.js
+pet/ghost.json
+pet/ghost.js

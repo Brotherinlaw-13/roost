@@ -1,0 +1,17 @@
+<!doctype html><html><body style="margin:0">
+<div id="c" style="width:208px;height:224px"></div>
+<pre id="out"></pre>
+<script src="lottie-full.min.js"></script>
+<script src="sprite.js"></script>
+<script>
+  // Renders every frame of the sprite to PNG (208x224 = 2x the 104x112 pet) and
+  // prints them, so headless Chrome's --dump-dom can hand them to build.sh.
+  const anim = lottie.loadAnimation({container: document.getElementById('c'), renderer: 'canvas', loop: false, autoplay: false,
+    animationData: SPRITE, rendererSettings: {clearCanvas: true, preserveAspectRatio: 'xMidYMid meet'}});
+  anim.addEventListener('DOMLoaded', () => {
+    const canvas = document.querySelector('#c canvas');
+    const out = [];
+    for (let f = 0; f < SPRITE.op; f++) { anim.goToAndStop(f, true); out.push(canvas.toDataURL('image/png')); }
+    document.getElementById('out').textContent = JSON.stringify({frames: out, markers: SPRITE.markers});
+  });
+</script></body></html>
