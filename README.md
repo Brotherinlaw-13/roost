@@ -135,3 +135,7 @@ proxy that runs `claude attach` and keeps transitions flicker-free),
 `indexer.js` (search), `pane.js` + `lib/pane.py` (the iTerm2 pane), and
 `ui/`. `pet/` is the desktop pet (Swift); `pet/build.sh --frames` re-renders
 its animation (needs Google Chrome).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

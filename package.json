@@ -1,7 +1,6 @@
 {
   "name": "roost",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
     "roost": "./bin/roost.js"
@@ -29,5 +28,10 @@
   "description": "Your Claude Code background sessions in one place: list, open, search, ticket cards, desktop pet.",
   "engines": {
     "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Brotherinlaw-13/roost.git"
   }
 }
