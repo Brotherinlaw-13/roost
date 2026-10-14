@@ -640,7 +640,11 @@ export function App({services, initial = {}}) {
   else if (mode === 'rename') status = html`<${Text} dimColor>enter to save · esc to cancel<//>`;
   else if (mode === 'help') status = html`<${Text} dimColor>any key to close<//>`;
   else if (mode === 'card') status = html`<${Text} dimColor>↑↓ move · enter unfold / open PR · o open in browser · → session · ← back · esc list<//>`;
-  else status = html`<${Text} wrap="truncate"><${Text} color="red">⏵⏵ bypass permissions<//><${Text} dimColor> · enter open · tab card · ^f search · ^e group · ^x delete · ? help<//><//>`;
+  else {
+    // The permission mode new sessions start in, when it is not Claude Code's default.
+    const mode = initial.launchMode ? html`<${Text} color=${initial.launchMode === 'bypassPermissions' ? 'red' : 'yellow'}>⏵⏵ ${initial.launchMode} · <//>` : null;
+    status = html`<${Text} wrap="truncate">${mode}<${Text} dimColor>enter open · tab card · ^f search · ^e group · ^x delete · ? help<//><//>`;
+  }
 
   if (paneId) {
     return html`<${Box} flexDirection="column" height=${rows - 1} width=${cols}>

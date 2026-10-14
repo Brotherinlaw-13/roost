@@ -28,7 +28,7 @@ you when a session needs you.
 ## Install
 
 ```sh
-git clone <this repo> ~/code/roost
+git clone https://github.com/Brotherinlaw-13/roost ~/code/roost
 cd ~/code/roost
 npm install
 npm link            # puts `roost` on your PATH
@@ -74,6 +74,17 @@ and turn on iTerm2 → Settings → General → Magic → **Enable Python API**.
 iTerm2 dims the pane without focus; to keep it bright, turn off Settings →
 Appearance → Dimming → *Dim inactive split panes*.
 
+### Demo mode
+
+```sh
+roost --demo
+```
+
+Made-up sessions, tickets and pull requests for a fictional company, with
+sessions you can open (they only look like Claude Code) and the card pane. While
+it runs, the desktop pet shows made-up alerts too. Use it to show roost or
+record it without real work on screen.
+
 ### Desktop pet (macOS, optional)
 
 ```sh
@@ -107,7 +118,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `paneKey` | `""` | an extra key for the card pane besides `→`, e.g. `"ctrl+]"` |
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |
 | `dispatchGroups` | `{}` | group for a session started from the pet, by issue type: `{"Bug": "Bugs", "*": "Working on"}` |
-| `launchPermissionMode` | `""` | permission mode for sessions roost starts or resumes, e.g. `"acceptEdits"`; empty = Claude Code asks as usual |
+| `launchPermissionMode` | `""` | permission mode for sessions roost starts or resumes, e.g. `"acceptEdits"`; empty = Claude Code asks as usual. ⚠️ With `"bypassPermissions"`, a ticket link dropped on the pet starts a session that acts on that ticket's text without asking: a ticket written with bad intent could make Claude run commands. Use it only if you trust every ticket you drop. |
 | `pet` | `false` | set by `roost pet` |
 
 A session's ticket is the `[KEY-123]` tag in its name, else the first key in

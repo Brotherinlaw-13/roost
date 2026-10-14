@@ -18,6 +18,12 @@ import {refreshIssues, issueUrl} from '../src/tracker.js';
 import {config} from '../src/config.js';
 
 const [cmd, ...rest] = process.argv.slice(2);
+// `roost --demo` is running: show its made-up alerts and change nothing real.
+const {demoOn, demoAttention} = await import('../src/demo.js');
+if (demoOn() && cmd !== '--open') {
+  if (!cmd) process.stdout.write(JSON.stringify(demoAttention()));
+  process.exit(0);
+}
 const SELF = fileURLToPath(import.meta.url);
 
 async function dispatchTicket(text) {

@@ -91,7 +91,8 @@ async function requestPane(id, title) {
   // iTerm starts the pane with its own environment: give it a PATH that finds
   // `claude` (installed next to node) and a socket that is not the pet's.
   const path = `${dirname(process.execPath)}:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin`;
-  const command = `/usr/bin/env PATH=${path} ROOST_SOCKET=/tmp/roost-pane-${id}.sock ${process.execPath} ${join(ROOT, 'bin', 'roost.js')} --card ${id}`;
+  const demo = process.env.ROOST_DEMO === '1' ? ' ROOST_DEMO=1' : '';
+  const command = `/usr/bin/env PATH=${path}${demo} ROOST_SOCKET=/tmp/roost-pane-${id}.sock ${process.execPath} ${join(ROOT, 'bin', 'roost.js')} --card ${id}`;
   const r = await request({op: 'open', tty, ratio: RATIO, command, title}, late => { if (late.pane) opened.add(late.pane); });
   return r.pane || null;
 }
