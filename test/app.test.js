@@ -500,3 +500,17 @@ test('with the auto panel on, ← goes back to the list instead of closing the c
   assert.match(t.frame(), /describe a task/);
   t.unmount();
 });
+
+test('/auto-focus switches whether links come to the front and saves it', async () => {
+  const saved = [];
+  const t = setup({setConfigValue: (k, v) => saved.push([k, v])}, {followLinks: true});
+  await t.ready();
+  t.stdin.write('/auto-focus'); await wait();
+  t.stdin.write(KEY.enter); await wait();
+  assert.match(t.frame(), /auto focus off/);
+  t.stdin.write('/auto-focus on'); await wait();
+  t.stdin.write(KEY.enter); await wait();
+  assert.match(t.frame(), /auto focus on/);
+  assert.deepEqual(saved, [['followLinks', false], ['followLinks', true]]);
+  t.unmount();
+});

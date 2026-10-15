@@ -21,7 +21,7 @@ const {searchTranscripts} = await import('../src/search.js');
 const {markSeen} = await import('../src/attention.js');
 const {listen} = await import('../src/control.js');
 const {paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, warmPanes, paneKeySequence, openUrlKeepFocus} = await import('../src/pane.js');
-const {config, setConfigValue} = await import('../src/config.js');
+const {config, setConfigValue, readConfigFile, DEFAULTS} = await import('../src/config.js');
 
 for (const sig of ['SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
 
@@ -29,8 +29,14 @@ installFlickerFreeOutput();
 
 let services = {...data, refreshStatuses, searchTicketPrs, refreshIssues, issueUrl, trackerLabel, searchTranscripts, markSeen, listen,
   paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence, setConfigValue};
-// In iTerm2, links (PRs, tickets) open in the browser without taking the focus.
-if (paneSupported()) services.openUrl = url => { openUrlKeepFocus(url); };
+// followLinks (/auto-focus): links come to the front, or open behind and you
+// stay here. Read at every click, so the card pane follows a change at once.
+services.openUrl = url => {
+  const follow = (readConfigFile() || {}).followLinks ?? DEFAULTS.followLinks;
+  if (follow) return data.openUrl(url, {background: false});
+  if (paneSupported()) return void openUrlKeepFocus(url);
+  return data.openUrl(url);
+};
 const cardAt0 = process.argv.indexOf('--card');
 if (demo) {
   const {demoServices, setDemoFlag} = await import('../src/demo.js');
@@ -50,7 +56,7 @@ const paneId = cardAt > 0 ? process.argv[cardAt + 1] : null;
 if (openId) suspendOutput();
 if (!paneId && !demo) data.refreshIndex();
 warmPanes();
-const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen}} />`, {exitOnCtrlC: true});
+const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen, followLinks: config().followLinks}} />`, {exitOnCtrlC: true});
 await app.waitUntilExit();
 app.clear();
 if (hasPanes()) await Promise.race([closeAllPanes(), new Promise(res => setTimeout(res, 1000))]);

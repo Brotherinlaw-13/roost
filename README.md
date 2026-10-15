@@ -50,6 +50,7 @@ time; it keeps your answers. `roost init --yes` takes every suggestion.
 | `ctrl+e` | move to a group · `ctrl+x` there deletes a group |
 | `ctrl+r` | rename · `ctrl+x` stop and delete · `ctrl+o` open its PR |
 | `/resume` | resume a past conversation |
+| `/auto-focus` | links you open (PRs, tickets) come to the front (`/auto-focus on`, the default) or open behind so you stay in the terminal (`/auto-focus off`, handy with a second screen); saved in the config |
 | `/auto-panel` | turn on or off the card opening beside every session you open (`/auto-panel on`, `/auto-panel off`); saved in the config |
 | `?` | all the keys |
 
@@ -121,6 +122,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `codeHost` | `"auto"` | `"github"` or `"none"` |
 | `github.org` | `""` | org to find a ticket's PRs in (PRs with the key in the title) |
 | `notesDir` | `"auto"` | a folder of `<TICKET>.md` notes shown on the card; `null` = off |
+| `followLinks` | `true` | links you open bring the browser to the front; `false` keeps you in the terminal (set by `/auto-focus`) |
 | `paneAlwaysOpen` | `false` | open the card pane with every session you open; `→` still hides it and `←` goes straight back to the list |
 | `paneKey` | `""` | an extra key for the card pane besides `→`, e.g. `"ctrl+]"` |
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |

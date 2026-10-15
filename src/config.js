@@ -50,6 +50,9 @@ export const DEFAULTS = {
   paneKey: '',
   // Open the card pane with every session you open (→ still hides it).
   paneAlwaysOpen: false,
+  // Links you open (PRs, tickets) bring the browser to the front; false keeps
+  // you in the terminal (handy with a second screen).
+  followLinks: true,
   // Small animations, e.g. the card sliding into its pane.
   animations: true,
   // The desktop pet (macOS); build it with `roost pet`.

@@ -29,6 +29,7 @@ const SHORTCUTS = [
   ['ctrl+o', 'open its PR in the browser (or cmd+click the emoji)'],
   ['/resume', 'resume a past conversation'],
   ['/auto-panel [on|off]', 'open the card beside every session you open (iTerm2); saved'],
+  ['/auto-focus [on|off]', 'links you open come to the front (on) or open behind (off); saved'],
   ['esc', 'clear the prompt · close'],
   ['ctrl+c', 'quit'],
 ];
@@ -265,6 +266,7 @@ export function App({services, initial = {}}) {
   const [reattach, setReattach] = useState(0);
   const goingBackIn = useRef(false);
   const [autoPane, setAutoPane] = useState(!!initial.paneAlwaysOpen);
+  const [followLinks, setFollowLinks] = useState(initial.followLinks !== false);
   // attach can leave the terminal in the session's alternate screen when roost
   // goes straight back in (see keepAlt in attach.js).
   const screenInAlt = useRef(false);
@@ -419,6 +421,15 @@ export function App({services, initial = {}}) {
       setInput('');
       const note = on && !services.paneSupported?.() ? ' (needs iTerm2 and npm run setup-pane)' : '';
       setHint(on ? `auto panel on: the card opens beside every session you open${note}` : 'auto panel off: → shows the card');
+      return;
+    }
+    const focusCmd = /^\/auto-focus(?:\s+(on|off))?$/i.exec(text);
+    if (focusCmd) {
+      const on = focusCmd[1] ? focusCmd[1].toLowerCase() === 'on' : !followLinks;
+      setFollowLinks(on);
+      services.setConfigValue?.('followLinks', on);
+      setInput('');
+      setHint(on ? 'auto focus on: links you open come to the front' : 'auto focus off: links open behind, you stay here');
       return;
     }
     if (text === '/resume') {
