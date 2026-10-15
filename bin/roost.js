@@ -20,7 +20,7 @@ const {loadCachedIssues, refreshIssues, issueUrl, trackerLabel} = await import('
 const {searchTranscripts} = await import('../src/search.js');
 const {markSeen} = await import('../src/attention.js');
 const {listen} = await import('../src/control.js');
-const {paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, warmPanes, paneKeySequence} = await import('../src/pane.js');
+const {paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, warmPanes, paneKeySequence, openUrlKeepFocus} = await import('../src/pane.js');
 const {config, setConfigValue} = await import('../src/config.js');
 
 for (const sig of ['SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
@@ -29,6 +29,8 @@ installFlickerFreeOutput();
 
 let services = {...data, refreshStatuses, searchTicketPrs, refreshIssues, issueUrl, trackerLabel, searchTranscripts, markSeen, listen,
   paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence, setConfigValue};
+// In iTerm2, links (PRs, tickets) open in the browser without taking the focus.
+if (paneSupported()) services.openUrl = url => { openUrlKeepFocus(url); };
 const cardAt0 = process.argv.indexOf('--card');
 if (demo) {
   const {demoServices, setDemoFlag} = await import('../src/demo.js');
@@ -46,7 +48,8 @@ const paneId = cardAt > 0 ? process.argv[cardAt + 1] : null;
 // Opened from the pet: go straight into the session; the list is painted only
 // once you leave it, so it never flashes first.
 if (openId) suspendOutput();
-if (!paneId) { if (!demo) data.refreshIndex(); warmPanes(); }
+if (!paneId && !demo) data.refreshIndex();
+warmPanes();
 const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen}} />`, {exitOnCtrlC: true});
 await app.waitUntilExit();
 app.clear();

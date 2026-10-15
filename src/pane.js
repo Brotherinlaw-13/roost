@@ -53,7 +53,7 @@ function start() {
 // that hangs must never freeze it.
 // A reply that comes after the timeout still reaches onLate: a pane that
 // opened slowly must be known, or it is left behind.
-const TIMEOUT_MS = {open: 3000, close: 800, alive: 800};
+const TIMEOUT_MS = {open: 3000, close: 800, alive: 800, open_url: 3000};
 
 function request(req, onLate = null) {
   const child = start();
@@ -107,6 +107,12 @@ export async function closeAllPanes() {
   const ids = [...opened];
   opened.clear();
   await closePanes(ids);
+}
+
+// Opens a link in the browser without leaving iTerm (Chrome takes the focus
+// even with `open -g`; the helper takes it straight back).
+export function openUrlKeepFocus(url) {
+  return request({op: 'open_url', url});
 }
 
 export const hasPanes = () => opened.size + opening.size > 0;

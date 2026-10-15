@@ -13,6 +13,8 @@ roost starts it once and every open/close after that is quick.
       -> {"id": 2}
   {"id": 3, "op": "alive", "panes": ["<session id>", ...]}
       -> {"id": 3, "panes": [those still open]}  a pane can close itself
+  {"id": 4, "op": "open_url", "url": "https://..."}
+      -> {"id": 4}   opens it in the browser and keeps iTerm in front
 """
 import asyncio
 import json
@@ -97,11 +99,37 @@ async def alive_panes(app, req):
     return {'panes': alive}
 
 
-HANDLERS = {'open': open_pane, 'close': close_panes, 'alive': alive_panes}
+CONNECTION = {}
+
+
+async def open_url(app, req):
+    """Chrome comes to the front when it opens a URL, even with `open -g`.
+    Wait for iTerm to lose focus and take it straight back, to the session
+    that had it."""
+    window = app.current_terminal_window
+    session = window.current_tab.current_session if window and window.current_tab else None
+    async with iterm2.FocusMonitor(CONNECTION['c']) as monitor:
+        await asyncio.create_subprocess_exec('open', '-g', req['url'])
+        try:
+            async with asyncio.timeout(2):
+                while True:
+                    update = await monitor.async_get_next_update()
+                    if update.application_active is not None and not update.application_active.application_active:
+                        break
+        except TimeoutError:
+            return {}
+    await app.async_activate(raise_all_windows=False, ignoring_other_apps=True)
+    if session:
+        await session.async_activate(select_tab=True, order_window_front=False)
+    return {}
+
+
+HANDLERS = {'open': open_pane, 'close': close_panes, 'alive': alive_panes, 'open_url': open_url}
 
 
 async def main(connection):
     app = await iterm2.async_get_app(connection)
+    CONNECTION['c'] = connection
     loop = asyncio.get_running_loop()
     reader = asyncio.StreamReader()
     await loop.connect_read_pipe(lambda: asyncio.StreamReaderProtocol(reader), sys.stdin)
