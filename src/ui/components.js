@@ -177,7 +177,9 @@ export function cardLines({session, ticket, issues, prs, statuses, notes, timeli
   if (ticket.primary && !issue) row('jl', undefined, [{text: '  loading…', dim: true}]);
   if (issue) {
     const meta = [issue.status, issue.type, issue.priority, issue.sprint, issue.assignee].filter(Boolean).join(' · ');
-    row('js', 'jira', [{text: '  '}, {text: issue.summary, bold: true}]);
+    // Enter on the summary opens the ticket, like a PR row; the line below
+    // the description unfolds it.
+    row('js', 'ticket', [{text: '  '}, {text: issue.summary, bold: true}, {text: '  ↗', dim: true}]);
     row('jm', undefined, [{text: '  '}, {text: meta, color: issue.statusCategory === 'done' ? THEME.success : THEME.warning}]);
     const desc = issue.description ? wrapText(issue.description, w - 4) : [];
     if (expanded.jira) {
@@ -185,7 +187,7 @@ export function cardLines({session, ticket, issues, prs, statuses, notes, timeli
       row('jd-end', `jira:${desc.length}`, [{text: '  ▲ enter to fold', dim: true}]);
     } else {
       desc.filter(Boolean).slice(0, 2).forEach((l, i) => row(`jd${i}`, undefined, [{text: `  ${l}`, dim: true}]));
-      if (desc.filter(Boolean).length > 2) row('jd-more', undefined, [{text: `  ▼ enter on the ticket to read all ${desc.length} lines`, dim: true}]);
+      if (desc.filter(Boolean).length > 2) row('jd-more', 'jira', [{text: `  ▼ enter to read all ${desc.length} lines`, dim: true}]);
     }
   }
   if (ticket.related.length) {

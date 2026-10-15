@@ -47,7 +47,7 @@ const paneId = cardAt > 0 ? process.argv[cardAt + 1] : null;
 // once you leave it, so it never flashes first.
 if (openId) suspendOutput();
 if (!paneId) { if (!demo) data.refreshIndex(); warmPanes(); }
-const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations}} />`, {exitOnCtrlC: true});
+const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen}} />`, {exitOnCtrlC: true});
 await app.waitUntilExit();
 app.clear();
 if (hasPanes()) await Promise.race([closeAllPanes(), new Promise(res => setTimeout(res, 1000))]);

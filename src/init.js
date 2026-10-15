@@ -76,6 +76,9 @@ export async function runInit({yes = process.argv.includes('--yes')} = {}) {
   const notes = await ask('Folder of <TICKET>.md notes to show on the card (none = off)', prev.notesDir ?? p.found.notesDir ?? 'none');
   c.notesDir = notes === 'none' ? null : notes;
 
+  if (process.env.TERM_PROGRAM === 'iTerm.app') {
+    c.paneAlwaysOpen = /^y/i.test(await ask('Show the card beside every session you open, not only after → (y/n)', prev.paneAlwaysOpen ? 'y' : 'n'));
+  }
   if (process.platform === 'darwin') {
     c.pet = /^y/i.test(await ask('Desktop pet that tells you when a session needs you (y/n)', prev.pet ? 'y' : 'n'));
   }

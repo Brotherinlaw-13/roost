@@ -265,7 +265,7 @@ test('card reached with tab: ← goes back to the list', async () => {
   unmount();
 });
 
-test('card: ↑↓ move inside the card, enter unfolds the full ticket and opens PRs', async () => {
+test('card: ↑↓ move inside the card; enter opens the ticket, unfolds it, and opens PRs', async () => {
   const long = Array.from({length: 12}, (_, i) => `line ${i + 1} of the ticket`).join('\n');
   const {stdin, calls, frame, unmount, ready} = setup({
     refreshIssues: async () => ({'HS-1234': {key: 'HS-1234', summary: 'The thing is broken', status: 'Code Review', description: long}}),
@@ -274,7 +274,10 @@ test('card: ↑↓ move inside the card, enter unfolds the full ticket and opens
   let f = frame();
   assert.match(f, /line 2 of the ticket/);
   assert.doesNotMatch(f, /line 9 of the ticket/);
-  assert.match(f, /enter on the ticket to read all 12 lines/);
+  assert.match(f, /enter to read all 12 lines/);
+  stdin.write(KEY.enter); await wait();
+  assert.deepEqual(calls.at(-1), ['openUrl', 'https://jira.example/browse/HS-1234']);
+  stdin.write(KEY.down); await wait();
   stdin.write(KEY.enter); await wait();
   f = frame();
   assert.match(f, /line 12 of the ticket/);
@@ -438,5 +441,26 @@ test('a card pane that closed itself is forgotten: the next → opens a new one'
   for (let i = 0; i < 50 && t.calls.filter(c => c[0] === 'attach').length < 3; i++) await wait(20);
   await wait(100);
   assert.deepEqual(t.calls.filter(c => ['openPane'].includes(c[0])).length, 2);
+  t.unmount();
+});
+
+test('paneAlwaysOpen: the card pane opens before the session; → hides it for this visit', async () => {
+  const results = [{card: true, syncOpen: true}, {viaArrow: true, syncOpen: true}];
+  const t = setup({
+    attach: id => { t.calls.push(['attach', id]); return results.shift() || {}; },
+    paneSupported: () => true,
+    openPane: id => { t.calls.push(['openPane', id]); t.panes = 1; return Promise.resolve(`pane-${id}`); },
+    hasPanes: () => t.panes > 0,
+    prunePanes: async () => {},
+    closeAllPanes: async () => { t.calls.push(['closeAllPanes']); t.panes = 0; },
+  }, {echoMs: 0, paneAlwaysOpen: true});
+  await t.ready();
+  t.stdin.write(KEY.enter);
+  for (let i = 0; i < 50 && t.calls.filter(c => c[0] === 'attach').length < 2; i++) await wait(20);
+  await wait(100);
+  assert.deepEqual(t.calls.filter(c => ['attach', 'openPane', 'closeAllPanes'].includes(c[0])), [
+    ['openPane', 'aaaaaaa1'], ['attach', 'aaaaaaa1'], ['closeAllPanes'], ['attach', 'aaaaaaa1'],
+  ]);
+  assert.match(t.frame(), /fix the thing/);
   t.unmount();
 });

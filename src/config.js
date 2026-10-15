@@ -48,6 +48,8 @@ export const DEFAULTS = {
   // Inside a session → (empty input) shows the card in a pane beside it (iTerm2).
   // paneKey adds another key for it, e.g. 'ctrl+]'; empty = arrows only.
   paneKey: '',
+  // Open the card pane with every session you open (→ still hides it).
+  paneAlwaysOpen: false,
   // Small animations, e.g. the card sliding into its pane.
   animations: true,
   // The desktop pet (macOS); build it with `roost pet`.

@@ -319,7 +319,7 @@ export function App({services, initial = {}}) {
     const id = attaching;
     services.markSeen?.([id]);
     suspendOutput();
-    const startedAt = Date.now();
+    let startedAt = Date.now();
     // With the session's input empty: → shows or hides the card beside it
     // (iTerm2), or leaves for the full card elsewhere; ← hides the card, else
     // goes back to the list. Works with any Claude Code. paneKey, if set, is an
@@ -336,12 +336,19 @@ export function App({services, initial = {}}) {
       if (panes && await panesOpen()) { closeSidePane(); return 'handled'; }
       return 'detach';
     };
-    Promise.resolve(services.attach(id, {keepAlt, hotkeys, onArrow})).then(r => r || {}, e => ({error: e.message})).then(async r => {
+    // paneAlwaysOpen: the card pane opens before the session, so the session
+    // paints once, at its final width. → still hides it for this visit.
+    const openFirst = async () => {
+      if (!initial.paneAlwaysOpen || goingBackIn.current || !panes || services.hasPanes?.()) return;
+      const s = ordered.find(x => x.id === id);
+      await Promise.race([services.openPane(id, s ? `card · ${s.name}` : 'card'), new Promise(res => setTimeout(res, 1500))]);
+    };
+    openFirst().then(() => { startedAt = Date.now(); return services.attach(id, {keepAlt, hotkeys, onArrow}); }).then(r => r || {}, e => ({error: e.message})).then(async r => {
       if (r.shown) screenInAlt.current = !!r.keptAlt;
       if (pendingOpen.current) {
         const next = pendingOpen.current;
         pendingOpen.current = null;
-        closeSidePane();
+        await closeSidePane();
         goingBackIn.current = false;
         services.markSeen?.([id]);
         setSelectedId(next);
@@ -447,7 +454,15 @@ export function App({services, initial = {}}) {
       if (key.downArrow) { if (stops.length) setCardCursor(stops[Math.min(stops.length - 1, at + 1)]); return; }
       if (key.return || value === ' ') {
         if (!stop) return;
-        if (stop.startsWith('jira')) return fold('jira', !expanded.jira);
+        if (stop === 'ticket') {
+          const {primary} = sessionTickets(focused);
+          return primary ? services.openUrl(services.issueUrl(primary)) : undefined;
+        }
+        // Unfolded, the cursor goes into the text; folded, back to the ▼ line.
+        if (stop.startsWith('jira')) {
+          setExpanded(e => ({...e, jira: !expanded.jira}));
+          return setCardCursor(expanded.jira ? 'jira' : 'jira:0');
+        }
         if (stop.startsWith('notes')) return fold('notes', !expanded.notes);
         if (stop.startsWith('pr:')) return services.openUrl(stop.slice(3));
         if (stop === 'ai' && focused) return openSession(focused.id);
@@ -662,7 +677,7 @@ export function App({services, initial = {}}) {
   else if (mode === 'search') status = html`<${Text} dimColor>↑↓ move · enter open / resume · tab card · esc close<//>`;
   else if (mode === 'rename') status = html`<${Text} dimColor>enter to save · esc to cancel<//>`;
   else if (mode === 'help') status = html`<${Text} dimColor>any key to close<//>`;
-  else if (mode === 'card') status = html`<${Text} dimColor>↑↓ move · enter unfold / open PR · o open in browser · → session · ← back · esc list<//>`;
+  else if (mode === 'card') status = html`<${Text} dimColor>↑↓ move · enter open ticket or PR / unfold · o open in browser · → session · ← back · esc list<//>`;
   else {
     // The permission mode new sessions start in, when it is not Claude Code's default.
     const mode = initial.launchMode ? html`<${Text} color=${initial.launchMode === 'bypassPermissions' ? 'red' : 'yellow'}>⏵⏵ ${initial.launchMode} · <//>` : null;
@@ -676,7 +691,7 @@ export function App({services, initial = {}}) {
       <${Box} flexDirection="column" height=${rows - 1} marginLeft=${offset} width=${cols - offset} overflowX="hidden">
         <${Box} flexDirection="column" flexGrow=${1} width=${cols}>${body}<//>
         <${Rule} cols=${cols} />
-        <${Text} dimColor wrap="truncate">↑↓ move · enter unfold / open PR · o browser · → or esc close<//>
+        <${Text} dimColor wrap="truncate">↑↓ move · enter open ticket or PR / unfold · → or esc close<//>
       <//>
     <//>`;
   }

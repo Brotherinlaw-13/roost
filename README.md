@@ -120,6 +120,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `codeHost` | `"auto"` | `"github"` or `"none"` |
 | `github.org` | `""` | org to find a ticket's PRs in (PRs with the key in the title) |
 | `notesDir` | `"auto"` | a folder of `<TICKET>.md` notes shown on the card; `null` = off |
+| `paneAlwaysOpen` | `false` | open the card pane with every session you open; `→` still hides it |
 | `paneKey` | `""` | an extra key for the card pane besides `→`, e.g. `"ctrl+]"` |
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |
 | `dispatchGroups` | `{}` | group for a session started from the pet, by issue type: `{"Bug": "Bugs", "*": "Working on"}` |
