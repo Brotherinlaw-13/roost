@@ -90,7 +90,12 @@ record it without real work on screen.
 ```sh
 roost pet          # build once, then start it
 roost pet stop
+roost pet --rebuild
 ```
+
+The first start also adds a `/pet` command to Claude Code (a skill linked
+into `~/.claude/skills/pet`): `/pet`, `/pet stop` and `/pet rebuild` from any
+session. Sessions already open do not see it until restarted.
 
 A small ghost that floats above your windows. It turns amber and shows a badge
 when a session needs you, blue when a session finishes or a PR of yours is

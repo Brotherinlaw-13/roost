@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
-import {existsSync} from 'node:fs';
+import {existsSync, mkdirSync, symlinkSync, lstatSync} from 'node:fs';
+import {homedir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readConfigFile, saveConfig} from './config.js';
@@ -10,6 +11,16 @@ import {readConfigFile, saveConfig} from './config.js';
 //   roost pet stop       quit it
 const PET = join(fileURLToPath(new URL('..', import.meta.url)), 'pet');
 const APP = join(PET, 'RoostPet.app');
+const SKILL = join(fileURLToPath(new URL('..', import.meta.url)), 'skills', 'pet');
+const CLAUDE_SKILL = join(homedir(), '.claude', 'skills', 'pet');
+
+// `/pet` inside Claude Code: a skill that runs `roost pet`. Linked, not copied, so it follows the repo.
+function installSkill() {
+  try { lstatSync(CLAUDE_SKILL); return false; } catch {}
+  mkdirSync(join(homedir(), '.claude', 'skills'), {recursive: true});
+  symlinkSync(SKILL, CLAUDE_SKILL);
+  return true;
+}
 
 export async function runPet(args = []) {
   if (process.platform !== 'darwin') {
@@ -25,5 +36,6 @@ export async function runPet(args = []) {
   spawnSync('open', [APP]);
   const c = readConfigFile() || {};
   if (!c.pet) saveConfig({...c, pet: true});
+  if (installSkill()) console.log('Added /pet to Claude Code (new sessions pick it up).');
   console.log('Pet started. Click it for its menu; ⌥⌘S opens the next session that needs you.');
 }
