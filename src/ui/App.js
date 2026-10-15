@@ -284,6 +284,16 @@ export function App({services, initial = {}}) {
     try { return await work(); } finally { services.freezeSession?.(false); }
   };
   const closeSidePane = () => (services.hasPanes?.() ? frozen(() => services.closeAllPanes()) : Promise.resolve());
+  // Resolves when the terminal gets wider (the card pane is gone).
+  const widened = () => {
+    if (!stdout?.on) return new Promise(() => {});
+    const before = stdout.columns;
+    return new Promise(res => {
+      const on = () => { if (stdout.columns > before) { stdout.off('resize', on); res(); } };
+      stdout.on('resize', on);
+      setTimeout(() => stdout.off('resize', on), 1000);
+    });
+  };
   const panesOpen = async () => {
     await services.prunePanes?.();
     return !!services.hasPanes?.();
@@ -368,9 +378,14 @@ export function App({services, initial = {}}) {
         closeSidePane();
         return backIn();
       }
-      // The pane closes before the next view is drawn, so it is drawn once,
-      // at full width (the sync block stays open meanwhile).
-      await Promise.race([closeSidePane(), new Promise(res => setTimeout(res, 400))]);
+      // The pane closes before the next view is drawn, so it is drawn once, at
+      // full width, the moment the terminal widens. The helper replies ~170 ms
+      // before iTerm actually removes the pane: drawing then put the list
+      // beside the pane, and the pane's space showed empty once it went.
+      const hadPane = !!services.hasPanes?.();
+      const wider = hadPane ? widened() : null;
+      const closing = closeSidePane();
+      await (hadPane ? Promise.race([wider, new Promise(res => setTimeout(res, 600))]) : closing);
       let closeSync = !!r.syncOpen;
       if (screenInAlt.current) { services.restoreScreen?.(); screenInAlt.current = false; closeSync = true; }
       setError(r.error || null);
