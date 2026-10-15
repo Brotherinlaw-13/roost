@@ -117,6 +117,11 @@ export function saveConfig(values) {
 
 export const readConfigFile = () => readJson(CONFIG_FILE);
 
+// Changes one setting in config.json, keeping the others.
+export function setConfigValue(key, value) {
+  saveConfig({...(readJson(CONFIG_FILE) || {}), [key]: value});
+}
+
 // 'ctrl+]' -> '\x1d', 'ctrl+t' -> '\x14', 'alt+p' -> '\x1bp'.
 export function keySequence(name) {
   const m = /^(ctrl|alt)\+(.)$/i.exec(String(name || '').trim());

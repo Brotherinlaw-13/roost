@@ -28,6 +28,7 @@ const SHORTCUTS = [
   ['ctrl+x', 'stop and delete the session'],
   ['ctrl+o', 'open its PR in the browser (or cmd+click the emoji)'],
   ['/resume', 'resume a past conversation'],
+  ['/auto-panel [on|off]', 'open the card beside every session you open (iTerm2); saved'],
   ['esc', 'clear the prompt · close'],
   ['ctrl+c', 'quit'],
 ];
@@ -263,6 +264,7 @@ export function App({services, initial = {}}) {
   const [attaching, setAttaching] = useState(null);
   const [reattach, setReattach] = useState(0);
   const goingBackIn = useRef(false);
+  const [autoPane, setAutoPane] = useState(!!initial.paneAlwaysOpen);
   // attach can leave the terminal in the session's alternate screen when roost
   // goes straight back in (see keepAlt in attach.js).
   const screenInAlt = useRef(false);
@@ -339,7 +341,7 @@ export function App({services, initial = {}}) {
     // paneAlwaysOpen: the card pane opens before the session, so the session
     // paints once, at its final width. → still hides it for this visit.
     const openFirst = async () => {
-      if (!initial.paneAlwaysOpen || goingBackIn.current || !panes || services.hasPanes?.()) return;
+      if (!autoPane || goingBackIn.current || !panes || services.hasPanes?.()) return;
       const s = ordered.find(x => x.id === id);
       await Promise.race([services.openPane(id, s ? `card · ${s.name}` : 'card'), new Promise(res => setTimeout(res, 1500))]);
     };
@@ -393,6 +395,16 @@ export function App({services, initial = {}}) {
     const text = input.trim();
     if (!text) { if (focused) openSession(focused.id); return; }
     if (EXIT_WORDS.has(text.toLowerCase())) return exit();
+    const auto = /^\/auto-panel(?:\s+(on|off))?$/i.exec(text);
+    if (auto) {
+      const on = auto[1] ? auto[1].toLowerCase() === 'on' : !autoPane;
+      setAutoPane(on);
+      services.setConfigValue?.('paneAlwaysOpen', on);
+      setInput('');
+      const note = on && !services.paneSupported?.() ? ' (needs iTerm2 and npm run setup-pane)' : '';
+      setHint(on ? `auto panel on: the card opens beside every session you open${note}` : 'auto panel off: → shows the card');
+      return;
+    }
     if (text === '/resume') {
       setPast(services.loadPastSessions(new Set(list.map(s => s.sessionId))));
       setMode('resume'); setInput(''); setCursor(0);

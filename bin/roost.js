@@ -21,14 +21,14 @@ const {searchTranscripts} = await import('../src/search.js');
 const {markSeen} = await import('../src/attention.js');
 const {listen} = await import('../src/control.js');
 const {paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, warmPanes, paneKeySequence} = await import('../src/pane.js');
-const {config} = await import('../src/config.js');
+const {config, setConfigValue} = await import('../src/config.js');
 
 for (const sig of ['SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
 
 installFlickerFreeOutput();
 
 let services = {...data, refreshStatuses, searchTicketPrs, refreshIssues, issueUrl, trackerLabel, searchTranscripts, markSeen, listen,
-  paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence};
+  paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence, setConfigValue};
 const cardAt0 = process.argv.indexOf('--card');
 if (demo) {
   const {demoServices, setDemoFlag} = await import('../src/demo.js');

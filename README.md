@@ -50,6 +50,7 @@ time; it keeps your answers. `roost init --yes` takes every suggestion.
 | `ctrl+e` | move to a group · `ctrl+x` there deletes a group |
 | `ctrl+r` | rename · `ctrl+x` stop and delete · `ctrl+o` open its PR |
 | `/resume` | resume a past conversation |
+| `/auto-panel` | turn on or off the card opening beside every session you open (`/auto-panel on`, `/auto-panel off`); saved in the config |
 | `?` | all the keys |
 
 Inside a session, with the input empty:

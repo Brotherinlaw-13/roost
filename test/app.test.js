@@ -464,3 +464,18 @@ test('paneAlwaysOpen: the card pane opens before the session; → hides it for t
   assert.match(t.frame(), /fix the thing/);
   t.unmount();
 });
+
+test('/auto-panel turns the always-open card pane on and off and saves it', async () => {
+  const saved = [];
+  const t = setup({setConfigValue: (k, v) => saved.push([k, v]), paneSupported: () => true});
+  await t.ready();
+  t.stdin.write('/auto-panel'); await wait();
+  t.stdin.write(KEY.enter); await wait();
+  assert.match(t.frame(), /auto panel on/);
+  t.stdin.write('/auto-panel off'); await wait();
+  t.stdin.write(KEY.enter); await wait();
+  assert.match(t.frame(), /auto panel off/);
+  assert.deepEqual(saved, [['paneAlwaysOpen', true], ['paneAlwaysOpen', false]]);
+  assert.equal(t.calls.filter(c => c[0] === 'dispatch').length, 0, 'a command never launches a session');
+  t.unmount();
+});

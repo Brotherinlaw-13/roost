@@ -132,7 +132,8 @@ test('the real services expose every function the app calls', async () => {
   const attn = await import('../src/attention.js');
   const control = await import('../src/control.js');
   const pane = await import('../src/pane.js');
-  const services = {...data, ...pr, ...jira, ...search, ...attn, ...control, ...pane};
+  const cfg = await import('../src/config.js');
+  const services = {...data, ...pr, ...jira, ...search, ...attn, ...control, ...pane, ...cfg};
   const app = (await import('node:fs')).readFileSync(new URL('../src/ui/App.js', import.meta.url), 'utf8');
   const used = [...new Set([...app.matchAll(/services\.(\w+)/g)].map(m => m[1]))];
   const missing = used.filter(name => typeof services[name] !== 'function');
