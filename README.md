@@ -102,7 +102,7 @@ A small ghost that floats above your windows. It turns amber and shows a badge
 when a session needs you, blue when a session finishes or a PR of yours is
 approved, red when one fails or gets changes requested. Hover for a summary;
 click for the list, snooze, and muting a session; `⌥⌘S` opens the next session
-that needs you from any app. It hides while your camera is on. Drop a ticket
+that needs you from any app. It hides while your camera is on (turn this off in its menu). Drop a ticket
 link on it to start a session for that ticket.
 
 Building it needs the Xcode Command Line Tools (`xcode-select --install`).

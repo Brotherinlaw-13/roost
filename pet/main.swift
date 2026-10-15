@@ -248,6 +248,12 @@ final class Pet: NSObject, NSApplicationDelegate, NSMenuDelegate {
     set { UserDefaults.standard.set(newValue, forKey: "snoozeUntil") }
   }
 
+  // Off for people who want the ghost on screen in their meetings too.
+  var hideOnCamera: Bool {
+    get { UserDefaults.standard.object(forKey: "hideOnCamera") as? Bool ?? true }
+    set { UserDefaults.standard.set(newValue, forKey: "hideOnCamera") }
+  }
+
   func applicationDidFinishLaunching(_ note: Notification) {
     let res = Bundle.main.resourceURL!
     config = try! JSONDecoder().decode(Config.self, from: Data(contentsOf: res.appendingPathComponent("config.json")))
@@ -329,7 +335,7 @@ final class Pet: NSObject, NSApplicationDelegate, NSMenuDelegate {
   }
 
   func checkCall() {
-    let now = Call.cameraOn() || FileManager.default.fileExists(atPath: FOCUS_FILE)
+    let now = (hideOnCamera && Call.cameraOn()) || FileManager.default.fileExists(atPath: FOCUS_FILE)
     if now != inCall {
       inCall = now
       if now { bubble.hide() }
@@ -501,6 +507,9 @@ final class Pet: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menuItem($0.0, #selector(snooze(_:)), tag: $0.1)
       }))
     }
+    let camera = menuItem("Hide when the camera is on", #selector(toggleHideOnCamera))
+    camera.state = hideOnCamera ? .on : .off
+    menu.addItem(camera)
     menu.addItem(menuItem("Open roost", #selector(openRoost)))
     menu.addItem(.separator())
     menu.addItem(NSMenuItem(title: "Quit pet", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
@@ -594,6 +603,11 @@ final class Pet: NSObject, NSApplicationDelegate, NSMenuDelegate {
     snoozeUntil = Date().addingTimeInterval(Double(minutes) * 60)
     bubble.hide()
     render()
+  }
+
+  @objc func toggleHideOnCamera() {
+    hideOnCamera.toggle()
+    checkCall()
   }
 
   @objc func resumeNow() {
