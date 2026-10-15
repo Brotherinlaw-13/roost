@@ -479,3 +479,24 @@ test('/auto-panel turns the always-open card pane on and off and saves it', asyn
   assert.equal(t.calls.filter(c => c[0] === 'dispatch').length, 0, 'a command never launches a session');
   t.unmount();
 });
+
+test('with the auto panel on, ← goes back to the list instead of closing the card', async () => {
+  const results = [{viaArrow: true, syncOpen: true}];
+  const t = setup({
+    attach: id => { t.calls.push(['attach', id]); return results.shift() || {}; },
+    paneSupported: () => true,
+    openPane: id => { t.calls.push(['openPane', id]); t.panes = 1; return Promise.resolve(`pane-${id}`); },
+    hasPanes: () => t.panes > 0,
+    prunePanes: async () => {},
+    closeAllPanes: async () => { t.calls.push(['closeAllPanes']); t.panes = 0; },
+  }, {echoMs: 0, paneAlwaysOpen: true});
+  await t.ready();
+  t.stdin.write(KEY.enter);
+  for (let i = 0; i < 50 && !t.calls.some(c => c[0] === 'closeAllPanes'); i++) await wait(20);
+  await wait(150);
+  assert.deepEqual(t.calls.filter(c => ['attach', 'openPane', 'closeAllPanes'].includes(c[0])), [
+    ['openPane', 'aaaaaaa1'], ['attach', 'aaaaaaa1'], ['closeAllPanes'],
+  ]);
+  assert.match(t.frame(), /describe a task/);
+  t.unmount();
+});

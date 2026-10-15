@@ -22,7 +22,7 @@ const SHORTCUTS = [
   ['ctrl+f', 'search sessions and past conversations, including what was said'],
   ['tab', 'session card: Jira, PRs, notes and AI session in one place'],
   ['→ (inside a session)', 'show or hide its card beside it (iTerm2; empty prompt)'],
-  ['← (inside a session)', 'hide the card, else come back here (empty prompt)'],
+  ['← (inside a session)', 'hide the card, else come back here (empty prompt); with /auto-panel on, always come back'],
   ['ctrl+e', 'move to a group · ctrl+x there deletes a group'],
   ['ctrl+r', 'rename'],
   ['ctrl+x', 'stop and delete the session'],
@@ -335,7 +335,8 @@ export function App({services, initial = {}}) {
         toggleSidePane(id);
         return 'handled';
       }
-      if (panes && await panesOpen()) { closeSidePane(); return 'handled'; }
+      // With the auto panel the card is always there: ← goes back to the list.
+      if (panes && !autoPane && await panesOpen()) { closeSidePane(); return 'handled'; }
       return 'detach';
     };
     // paneAlwaysOpen: the card pane opens before the session, so the session
@@ -363,7 +364,7 @@ export function App({services, initial = {}}) {
         return backIn();
       }
       // ← with the card open closes the card and stays in the session.
-      if (r.viaArrow && services.paneSupported?.() && await panesOpen()) {
+      if (r.viaArrow && !autoPane && services.paneSupported?.() && await panesOpen()) {
         closeSidePane();
         return backIn();
       }
