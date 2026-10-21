@@ -22,8 +22,9 @@ export const paneSupported = () => process.env.TERM_PROGRAM === 'iTerm.app' && e
 
 let helper = null;
 let seq = 0;
-const waiting = new Map();
 
+// Each helper keeps its own pending replies, so a helper that is being
+// replaced cannot answer (or fail) the requests of the new one.
 function start() {
   if (helper) return helper;
   const child = spawn(PY, [SCRIPT], {stdio: ['pipe', 'pipe', 'ignore'], detached: true});
@@ -31,17 +32,18 @@ function start() {
   child.unref();
   child.stdin.unref?.();
   child.stdout.unref?.();
+  child.waiting = new Map();
   helper = child;
   createInterface({input: child.stdout}).on('line', line => {
     let msg;
     try { msg = JSON.parse(line); } catch { return; }
-    waiting.get(msg.id)?.(msg);
-    waiting.delete(msg.id);
+    child.waiting.get(msg.id)?.(msg);
+    child.waiting.delete(msg.id);
   });
   const reset = () => {
     if (helper === child) helper = null;
-    for (const done of waiting.values()) done({error: 'pane helper stopped'});
-    waiting.clear();
+    for (const done of child.waiting.values()) done({error: 'pane helper stopped'});
+    child.waiting.clear();
   };
   child.on('exit', reset);
   child.on('error', reset);
@@ -49,24 +51,43 @@ function start() {
   return child;
 }
 
+// A helper can outlive the iTerm it connected to: iTerm keeps your sessions
+// (roost included) across an update or restart, but the helper's link to it
+// dies and it stops answering. Such a helper is replaced.
+function restart() {
+  const old = helper;
+  helper = null;
+  try { old?.kill('SIGKILL'); } catch {}
+}
+
 // roost waits on some replies before drawing (leaving a session): a helper
-// that hangs must never freeze it.
-// A reply that comes after the timeout still reaches onLate: a pane that
-// opened slowly must be known, or it is left behind.
+// that hangs must never freeze it. A reply that comes after the timeout
+// still reaches onLate: a pane that opened slowly must be known.
 const TIMEOUT_MS = {open: 3000, close: 800, alive: 800, open_url: 3000};
 
-function request(req, onLate = null) {
+function send(req, onLate) {
   const child = start();
   const id = ++seq;
   return new Promise(resolve => {
     const timer = setTimeout(() => {
-      if (onLate) waiting.set(id, onLate); else waiting.delete(id);
+      if (onLate) child.waiting.set(id, onLate); else child.waiting.delete(id);
       resolve({error: 'timeout'});
     }, TIMEOUT_MS[req.op] || 800);
-    waiting.set(id, msg => { clearTimeout(timer); resolve(msg); });
+    child.waiting.set(id, msg => { clearTimeout(timer); resolve(msg); });
     child.stdin.write(`${JSON.stringify({...req, id})}\n`);
   });
 }
+
+// A failed or unanswered request gets one more try with a fresh helper.
+async function request(req, onLate = null) {
+  const r = await send(req, onLate);
+  if (!r.error || /no iTerm session/.test(r.error)) return r;
+  restart();
+  return send(req, onLate);
+}
+
+// Is the helper answering? (and replaces it if not)
+export const pingPaneHelper = () => request({op: 'alive', panes: []});
 
 // Connect ahead of time, so the first → is as quick as the rest.
 export function warmPanes() {

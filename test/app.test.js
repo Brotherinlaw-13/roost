@@ -514,3 +514,14 @@ test('/auto-focus switches whether links come to the front and saves it', async 
   assert.deepEqual(saved, [['followLinks', false], ['followLinks', true]]);
   t.unmount();
 });
+
+test('a deleted session comes back when a resume reuses its id', async () => {
+  let list = SESSIONS;
+  const {stdin, frame, unmount, ready} = setup({loadSessions: async () => list}); await ready();
+  stdin.write(KEY.ctrlX); await wait(); stdin.write('y'); await wait();
+  assert.doesNotMatch(frame(), /fix the thing\s+🔴 Working/);
+  list = SESSIONS.slice(1); await wait(3200);
+  list = SESSIONS; await wait(3200);
+  assert.match(frame(), /fix the thing\s+🔴 Working/);
+  unmount();
+});

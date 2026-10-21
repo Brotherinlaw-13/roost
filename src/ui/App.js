@@ -121,7 +121,12 @@ export function App({services, initial = {}}) {
   statusesRef.current = statuses;
 
   const reloadSessions = () => services.loadSessions()
-    .then(list => setSessions(prev => (same(prev, list) ? prev : list)))
+    .then(list => {
+      setSessions(prev => (same(prev, list) ? prev : list));
+      // A deleted id is unhidden once it is gone: a resume can reuse it.
+      const ids = new Set(list.map(s => s.id));
+      setHidden(h => ([...h].every(id => ids.has(id)) ? h : new Set([...h].filter(id => ids.has(id)))));
+    })
     .catch(e => setError(e.message));
   usePolling(reloadSessions, SESSIONS_MS);
   usePolling(() => {
