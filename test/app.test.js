@@ -525,3 +525,27 @@ test('a deleted session comes back when a resume reuses its id', async () => {
   assert.match(frame(), /fix the thing\s+🔴 Working/);
   unmount();
 });
+
+test('ctrl+b: the board shows a column per stage; arrows move; ⇧→ pins a card to the next column', async () => {
+  const pinned = [];
+  const t = setup({
+    setConfigValue: () => {},
+    loadLaneOverrides: () => ({}),
+    setLaneOverride: (id, lane) => { pinned.push([id, lane]); return lane ? {[id]: lane} : {}; },
+  });
+  await t.ready();
+  t.stdin.write('\x02'); await wait(120);
+  let f = t.frame();
+  assert.match(f, /Waiting for me/);
+  assert.match(f, /In dev/);
+  assert.match(f, /fix the thing/);
+  t.stdin.write('\x1b[1;2C'); await wait(120);
+  assert.equal(pinned.length, 1);
+  assert.match(t.frame(), /📌/);
+  t.stdin.write('\x01'); await wait(120);
+  assert.deepEqual(pinned.at(-1)[1], null);
+  t.stdin.write('\x02'); await wait(120);
+  assert.match(t.frame(), /02 Bugs/);
+  assert.doesNotMatch(t.frame(), /Waiting for me/);
+  t.unmount();
+});

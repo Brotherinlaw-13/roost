@@ -22,13 +22,14 @@ const {markSeen} = await import('../src/attention.js');
 const {listen} = await import('../src/control.js');
 const {paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, warmPanes, paneKeySequence, openUrlKeepFocus} = await import('../src/pane.js');
 const {config, setConfigValue, readConfigFile, DEFAULTS} = await import('../src/config.js');
+const {loadLaneOverrides, setLaneOverride} = await import('../src/board.js');
 
 for (const sig of ['SIGTERM', 'SIGHUP']) process.on(sig, () => process.exit(0));
 
 installFlickerFreeOutput();
 
 let services = {...data, refreshStatuses, searchTicketPrs, refreshIssues, issueUrl, trackerLabel, searchTranscripts, markSeen, listen,
-  paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence, setConfigValue};
+  paneSupported, openPane, closeAllPanes, hasPanes, prunePanes, closeOwnPane, paneKeySequence, setConfigValue, loadLaneOverrides, setLaneOverride};
 // followLinks (/auto-focus): links come to the front, or open behind and you
 // stay here. Read at every click, so the card pane follows a change at once.
 services.openUrl = url => {
@@ -56,7 +57,7 @@ const paneId = cardAt > 0 ? process.argv[cardAt + 1] : null;
 if (openId) suspendOutput();
 if (!paneId && !demo) data.refreshIndex();
 warmPanes();
-const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen, followLinks: config().followLinks}} />`, {exitOnCtrlC: true});
+const app = render(html`<${App} services=${services} initial=${demo ? {openId, paneId, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen, view: config().view} : {statuses: loadCachedStatuses(), issues: loadCachedIssues(), ticketPrs: loadCachedTicketPrs(), openId, paneId, launchMode: config().launchPermissionMode, animations: config().animations, paneAlwaysOpen: config().paneAlwaysOpen, followLinks: config().followLinks, view: config().view}} />`, {exitOnCtrlC: true});
 await app.waitUntilExit();
 app.clear();
 if (hasPanes()) await Promise.race([closeAllPanes(), new Promise(res => setTimeout(res, 1000))]);

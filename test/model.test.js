@@ -133,7 +133,8 @@ test('the real services expose every function the app calls', async () => {
   const control = await import('../src/control.js');
   const pane = await import('../src/pane.js');
   const cfg = await import('../src/config.js');
-  const services = {...data, ...pr, ...jira, ...search, ...attn, ...control, ...pane, ...cfg};
+  const board = await import('../src/board.js');
+  const services = {...data, ...pr, ...jira, ...search, ...attn, ...control, ...pane, ...cfg, ...board};
   const app = (await import('node:fs')).readFileSync(new URL('../src/ui/App.js', import.meta.url), 'utf8');
   const used = [...new Set([...app.matchAll(/services\.(\w+)/g)].map(m => m[1]))];
   const missing = used.filter(name => typeof services[name] !== 'function');
@@ -154,4 +155,22 @@ test('attention: only what changed after you looked, needs > failed > done', asy
   const r = attention(sessions, {seen: {a: 200, b: 200, c: 200, e: 200}, since: id => since[id]});
   assert.deepEqual(r.items.map(i => i.id), ['b', 'f', 'e', 'c']);
   assert.equal(r.working, 1);
+});
+
+test('board: a session lands in the column its state, PRs and ticket say', async () => {
+  const {autoLane} = await import('../src/board.js');
+  const pr = (state, review = null) => ({'https://github.com/acme/app/pull/1': {state, review}});
+  const s = (extra = {}) => ({id: 'x', state: 'working', status: 'idle', children: [{kind: 'pr', href: 'https://github.com/acme/app/pull/1'}], ...extra});
+  assert.equal(autoLane(s({state: 'blocked'}), {statuses: pr('DRAFT')}), 'me');
+  assert.equal(autoLane(s({state: 'blocked'}), {statuses: pr('OPEN')}), 'cr', 'waiting for you, but its PR is in review');
+  assert.equal(autoLane(s({state: 'failed'})), 'me');
+  assert.equal(autoLane(s(), {statuses: pr('MERGED')}), 'released');
+  assert.equal(autoLane(s(), {statuses: pr('OPEN', 'APPROVED')}), 'ready');
+  assert.equal(autoLane(s(), {statuses: pr('OPEN')}), 'cr');
+  assert.equal(autoLane(s(), {statuses: pr('OPEN', 'CHANGES_REQUESTED')}), 'dev');
+  assert.equal(autoLane(s(), {statuses: pr('DRAFT')}), 'dev');
+  assert.equal(autoLane(s({group: '06 Waiting on Others'}), {statuses: pr('DRAFT')}), 'others');
+  assert.equal(autoLane(s({children: []}), {issue: {status: 'Clarification Needed'}}), 'others');
+  assert.equal(autoLane(s({children: [], state: 'done'})), 'done');
+  assert.equal(autoLane(s({children: []}), {issue: {status: 'Released', statusCategory: 'done'}}), 'released');
 });

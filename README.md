@@ -54,6 +54,26 @@ time; it keeps your answers. `roost init --yes` takes every suggestion.
 | `/auto-panel` | turn on or off the card opening beside every session you open (`/auto-panel on`, `/auto-panel off`); saved in the config |
 | `?` | all the keys |
 
+### Board view
+
+`ctrl+b` (or `/board`, `/list`) switches between the list and a board with a
+column per stage of the work. roost works out each session's column from its
+state, its PRs and its ticket:
+
+| Column | When |
+|---|---|
+| Waiting for me | it asks you something while still in dev, or it failed |
+| In dev | everything else: working, draft PR, changes requested |
+| In CR | an open PR in review, or the ticket in code review |
+| Ready to merge | an approved PR, or the ticket past code review / in QA |
+| Waiting on others | the ticket is in clarification / blocked, or the session's group says "waiting on others" |
+| Released | its PR is merged, or the ticket is done |
+| Done | the session finished with no open PR (an investigation, a question) |
+
+Groups become epics: each card shows its group. `←` `→` move between columns,
+`↑` `↓` within one; `⇧←` `⇧→` move the card to another column by hand (📌), and
+`ctrl+a` puts it back where roost would. roost remembers the last view.
+
 Inside a session, with the input empty:
 
 - `→` shows or hides the session card in a pane beside it (iTerm2). The

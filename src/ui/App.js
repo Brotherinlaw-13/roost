@@ -5,6 +5,8 @@ import {html, Header, Picker, Rule, listLines, windowLines, cardLines, ResumeBox
 import {matchSession, termsOf} from '../search.js';
 import {sessionTickets, allTicketKeys} from '../tickets.js';
 import {suspendOutput, resumeOutput} from '../terminal.js';
+import {Board} from './board.js';
+import {LANES, boardLanes, locate, autoLane} from '../board.js';
 import {
   ACCENT, NO_GROUP, buildGroups, orderedSessions, filterGroups,
   pickPr, ghostPose, msToNextPose, formatAge, shortCwd,
@@ -23,7 +25,9 @@ const SHORTCUTS = [
   ['tab', 'session card: Jira, PRs, notes and AI session in one place'],
   ['→ (inside a session)', 'show or hide its card beside it (iTerm2; empty prompt)'],
   ['← (inside a session)', 'hide the card, else come back here (empty prompt); with /auto-panel on, always come back'],
-  ['ctrl+e', 'move to a group · ctrl+x there deletes a group'],
+  ['ctrl+b', 'board view: a column per stage (waiting for me, in dev, in CR…) · again for the list'],
+  ['⇧← ⇧→ (board)', 'move the card to another column by hand (📌) · ctrl+a puts it back where roost would'],
+  ['ctrl+e', 'move to a group (an epic) · ctrl+x there deletes a group'],
   ['ctrl+r', 'rename'],
   ['ctrl+x', 'stop and delete the session'],
   ['ctrl+o', 'open its PR in the browser (or cmd+click the emoji)'],
@@ -167,6 +171,9 @@ export function App({services, initial = {}}) {
   const ordered = useMemo(() => orderedSessions(groups), [groups]);
   const focusIndex = Math.max(0, ordered.findIndex(s => s.id === selectedId));
   const focused = ordered[focusIndex] || null;
+  // The board: one column per stage of the work (see board.js).
+  const [view, setView] = useState(initial.view === 'board' ? 'board' : 'list');
+  const [overrides, setOverrides] = useState(() => services.loadLaneOverrides?.() || {});
   const focusedGroup = focused?.group || NO_GROUP;
 
   const allGroupNames = useMemo(() => {
@@ -259,6 +266,43 @@ export function App({services, initial = {}}) {
     if (!ordered.length) return;
     const i = Math.max(0, Math.min(ordered.length - 1, focusIndex + delta));
     setSelectedId(ordered[i].id);
+  };
+
+  const lanes = useMemo(() => boardLanes(list, {statuses, overrides, issueOf: s => issues[sessionTickets(s).primary]}),
+    [list, statuses, overrides, issues]);
+  const boardSel = locate(lanes, focused?.id);
+  const switchView = next => {
+    setView(next);
+    services.setConfigValue?.('view', next);
+    setHint(null);
+  };
+  // ←→ between columns (skipping empty ones), ↑↓ within one, ⇧←→ pins the
+  // card to the next column (back to automatic when that is its own).
+  const boardKeys = (key, value) => {
+    const [i, j] = boardSel;
+    if (key.ctrl && value === 'a' && focused) { setOverrides(services.setLaneOverride?.(focused.id, null) || {}); return true; }
+    if ((key.leftArrow || key.rightArrow) && key.shift && focused && i >= 0) {
+      const k = Math.max(0, Math.min(LANES.length - 1, i + (key.rightArrow ? 1 : -1)));
+      const auto = autoLane(focused, {statuses, issue: issues[sessionTickets(focused).primary]});
+      setOverrides(services.setLaneOverride?.(focused.id, LANES[k].key === auto ? null : LANES[k].key) || {});
+      return true;
+    }
+    if (input) return false;
+    if (key.upArrow || key.downArrow) {
+      const cards = i >= 0 ? lanes[LANES[i].key] : [];
+      const next = cards[Math.max(0, Math.min(cards.length - 1, j + (key.downArrow ? 1 : -1)))];
+      if (next) setSelectedId(next.id);
+      return true;
+    }
+    if (key.leftArrow || key.rightArrow) {
+      const step = key.rightArrow ? 1 : -1;
+      for (let k = (i < 0 ? 0 : i + step); k >= 0 && k < LANES.length; k += step) {
+        const cards = lanes[LANES[k].key];
+        if (cards.length) { setSelectedId(cards[Math.min(Math.max(j, 0), cards.length - 1)].id); break; }
+      }
+      return true;
+    }
+    return false;
   };
 
   const toList = (msg = null) => { setMode('list'); setInput(''); setCursor(0); setConfirm(false); setHint(msg); };
@@ -428,6 +472,7 @@ export function App({services, initial = {}}) {
       setHint(on ? `auto panel on: the card opens beside every session you open${note}` : 'auto panel off: → shows the card');
       return;
     }
+    if (text === '/board' || text === '/list') { setInput(''); switchView(text.slice(1)); return; }
     const focusCmd = /^\/auto-focus(?:\s+(on|off))?$/i.exec(text);
     if (focusCmd) {
       const on = focusCmd[1] ? focusCmd[1].toLowerCase() === 'on' : !followLinks;
@@ -527,6 +572,8 @@ export function App({services, initial = {}}) {
     }
 
     if (mode === 'list') {
+      if (key.ctrl && value === 'b') { switchView(view === 'board' ? 'list' : 'board'); return; }
+      if (view === 'board' && boardKeys(key, value)) return;
       if (key.upArrow) return move(-1);
       if (key.downArrow) return move(1);
       if (key.rightArrow && !input && focused) { openSession(focused.id); return; }
@@ -689,6 +736,10 @@ export function App({services, initial = {}}) {
       <${Text}> <//>
       ${SHORTCUTS.map(([k, d]) => html`<${Text} key=${k}>  <${Text} bold>${k.padEnd(22)}<//><${Text} dimColor>${d}<//><//>`)}
     <//>`;
+  } else if (view === 'board' && mode === 'list') {
+    body = sessions === null
+      ? html`<${Text} dimColor>loading sessions…<//>`
+      : html`<${Board} lanes=${lanes} sel=${boardSel} statuses=${statuses} cols=${cols} room=${room} now=${now} />`;
   } else {
     const lines = listLines({groups, statuses, selectedId: focused?.id, now, cols});
     const {visible, above, below} = windowLines(lines, focused?.id, room);
@@ -725,7 +776,10 @@ export function App({services, initial = {}}) {
   else {
     // The permission mode new sessions start in, when it is not Claude Code's default.
     const mode = initial.launchMode ? html`<${Text} color=${initial.launchMode === 'bypassPermissions' ? 'red' : 'yellow'}>⏵⏵ ${initial.launchMode} · <//>` : null;
-    status = html`<${Text} wrap="truncate">${mode}<${Text} dimColor>enter open · tab card · ^f search · ^e group · ^x delete · ? help<//><//>`;
+    const keys = view === 'board'
+      ? '←→ columns · ↑↓ cards · ⇧←→ move · ^a auto · enter open · tab card · ^b list · ? help'
+      : 'enter open · tab card · ^b board · ^f search · ^e group · ^x delete · ? help';
+    status = html`<${Text} wrap="truncate">${mode}<${Text} dimColor>${keys}<//><//>`;
   }
 
   if (paneId) {

@@ -84,6 +84,8 @@ function liveSessions(list) {
 
 export function demoServices(base) {
   let list = SESSIONS.map(s => ({...s}));
+  // The demo changes nothing real: settings and pinned cards stay in memory.
+  let pins = {};
   const find = id => list.find(s => s.id === id);
   return {
     ...base,
@@ -109,6 +111,9 @@ export function demoServices(base) {
       return hits;
     },
     refreshIndex: () => {},
+    setConfigValue: () => {},
+    loadLaneOverrides: () => pins,
+    setLaneOverride: (id, lane) => { pins = {...pins}; if (lane) pins[id] = lane; else delete pins[id]; return pins; },
     markSeen: () => {},
     openUrl: () => {},
     dispatch: async (prompt, group) => {
