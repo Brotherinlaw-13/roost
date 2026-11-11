@@ -452,6 +452,15 @@ export function App({services, initial = {}}) {
     });
   }, [attaching, reattach]);
 
+  // A launch that needs a person (Claude Code's trust prompt) gets the
+  // terminal: roost stops reading keys and painting until it returns.
+  const [handingOver, setHandingOver] = useState(false);
+  const withTerminal = async work => {
+    setHandingOver(true);
+    suspendOutput();
+    try { return await work(); } finally { setHandingOver(false); resumeOutput(); }
+  };
+
   const runAsync = (label, promise, done) => {
     setHint(label);
     setError(null);
@@ -488,7 +497,7 @@ export function App({services, initial = {}}) {
       return;
     }
     setInput('');
-    runAsync('launching…', services.dispatch(text, focusedGroup), id => {
+    runAsync('launching…', services.dispatch(text, focusedGroup, {withTerminal}), id => {
       if (id) setSelectedId(id);
       setHint(id ? `launched ${id}${focusedGroup ? ` in «${focusedGroup}»` : ''}` : 'launched');
     });
@@ -520,7 +529,7 @@ export function App({services, initial = {}}) {
         setInput('');
         if (r.kind === 'session') { setSelectedId(r.id); openSession(r.id); return; }
         setMode('list');
-        runAsync('resuming…', services.resume(r.sessionId, r.cwd), id => { setHint(null); if (id) { setSelectedId(id); openSession(id); } });
+        runAsync('resuming…', services.resume(r.sessionId, r.cwd, {withTerminal}), id => { setHint(null); if (id) { setSelectedId(id); openSession(id); } });
         return;
       }
       editInput(value, key);
@@ -653,7 +662,7 @@ export function App({services, initial = {}}) {
       const it = pastItems[Math.min(cursor, pastItems.length - 1)];
       if (key.return && it) {
         toList();
-        runAsync('resuming…', services.resume(it.value.sessionId, it.value.cwd), id => {
+        runAsync('resuming…', services.resume(it.value.sessionId, it.value.cwd, {withTerminal}), id => {
           setHint(null);
           if (id) { setSelectedId(id); openSession(id); }
         });
@@ -661,7 +670,7 @@ export function App({services, initial = {}}) {
       }
       editInput(value, key);
     }
-  }, {isActive: !attaching});
+  }, {isActive: !attaching && !handingOver});
 
   // Read from disk only when the card opens or its session changes.
   const cardKey = mode === 'card' && focused ? `${focused.id}:${focused.updatedAt}` : null;

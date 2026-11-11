@@ -549,3 +549,14 @@ test('ctrl+b: the board shows a column per stage; arrows move; ⇧→ pins a car
   assert.doesNotMatch(t.frame(), /Waiting for me/);
   t.unmount();
 });
+
+test('launching passes a way to hand the terminal over (for Claude Code\'s trust prompt)', async () => {
+  let opts = null;
+  const t = setup({dispatch: async (p, g, o) => { opts = o; return 'bbbbbbb1'; }});
+  await t.ready();
+  t.stdin.write('do the thing'); await wait();
+  t.stdin.write(KEY.enter); await wait(120);
+  assert.equal(typeof opts?.withTerminal, 'function');
+  assert.equal(await opts.withTerminal(async () => 'ran'), 'ran');
+  t.unmount();
+});

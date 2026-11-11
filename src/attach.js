@@ -202,3 +202,29 @@ export function attachProxied(pty, cmd, args, {env, cwd, stdin = process.stdin, 
     });
   });
 }
+
+// Runs a command in the terminal itself, on the alternate screen, keys and
+// size passed through: for prompts only a person can answer, like Claude
+// Code's "do you trust this folder?". Back on the main screen, roost's last
+// view is still there.
+export function runInteractive(pty, cmd, args, {env, cwd, stdin = process.stdin, stdout = process.stdout} = {}) {
+  return new Promise(resolve => {
+    rawWrite('\x1b[?1049h\x1b[H\x1b[2J\x1b[?25h');
+    const p = pty.spawn(cmd, args, {name: env.TERM || 'xterm-256color', cols: stdout.columns || 120, rows: stdout.rows || 40, cwd, env});
+    let text = '';
+    p.onData(d => { text += textOf(d); rawWrite(d); });
+    const onKey = d => p.write(d.toString());
+    const onResize = () => p.resize(stdout.columns || 120, stdout.rows || 40);
+    stdin.setRawMode?.(true);
+    stdin.on('data', onKey);
+    stdin.resume();
+    stdout.on('resize', onResize);
+    p.onExit(({exitCode}) => {
+      stdin.removeListener('data', onKey);
+      stdin.pause();
+      stdout.removeListener('resize', onResize);
+      rawWrite('\x1b[?1049l');
+      resolve({status: exitCode, text});
+    });
+  });
+}

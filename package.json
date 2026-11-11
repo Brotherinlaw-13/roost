@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node bin/roost.js",
-    "test": "ROOST_HOME=$(mktemp -d) node --test test/",
+    "test": "FORCE_COLOR=1 ROOST_HOME=$(mktemp -d) node --test test/",
     "setup-pane": "python3 -m venv .venv && .venv/bin/pip install -q iterm2",
     "pet": "node bin/roost.js pet"
   },

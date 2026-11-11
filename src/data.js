@@ -146,16 +146,32 @@ const parseId = out => /attach ([0-9a-f]{8})/.exec(out)?.[1] || null;
 // `ticket start` creates the right worktree from there.
 const launchFlags = () => (config().launchPermissionMode ? ['--permission-mode', config().launchPermissionMode] : []);
 
-export async function dispatch(prompt, group) {
-  const out = await run(CLAUDE, ['--bg', ...launchFlags(), prompt], {cwd: HOME});
+// Since Claude Code 2.1.3xx a session can only start in the home folder from
+// an interactive terminal, after its "do you trust this folder?" prompt. So a
+// launch that is refused for that reason runs again in the terminal itself
+// (withTerminal, from the app, hands the screen and keys over meanwhile).
+async function launch(args, cwd, withTerminal) {
+  try {
+    return await run(CLAUDE, args, {cwd});
+  } catch (e) {
+    if (!/Workspace not trusted/.test(e.message) || !pty || !withTerminal) throw e;
+    const {runInteractive} = await import('./attach.js');
+    const r = await withTerminal(() => runInteractive(pty, CLAUDE, args, {cwd, env: CHILD_ENV}));
+    if (!parseId(r.text)) throw new Error('not started: the folder was not trusted');
+    return r.text;
+  }
+}
+
+export async function dispatch(prompt, group, {withTerminal} = {}) {
+  const out = await launch(['--bg', ...launchFlags(), prompt], HOME, withTerminal);
   const id = parseId(out);
   if (id && group) await setGroup(id, group);
   return id;
 }
 
-export async function resume(sessionId, cwd) {
-  const out = await run(CLAUDE, ['--bg', ...launchFlags(), '--resume', sessionId],
-    {cwd: cwd && existsSync(cwd) ? cwd : HOME});
+export async function resume(sessionId, cwd, {withTerminal} = {}) {
+  const out = await launch(['--bg', ...launchFlags(), '--resume', sessionId],
+    cwd && existsSync(cwd) ? cwd : HOME, withTerminal);
   return parseId(out);
 }
 
