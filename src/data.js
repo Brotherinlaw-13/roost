@@ -2,6 +2,7 @@ import {execFile, spawnSync} from 'node:child_process';
 import {execDetached} from './proc.js';
 export {freezeSession} from './attach.js';
 import {rawWrite, SYNC_ON} from './terminal.js';
+import {openedPrs} from './ownprs.js';
 import {config, statePath, LEGACY_DIR, launchDir, projectDirs} from './config.js';
 import {readFileSync, writeFileSync, renameSync, existsSync, rmSync, readdirSync, statSync, openSync, readSync, closeSync} from 'node:fs';
 import {homedir, tmpdir} from 'node:os';
@@ -44,6 +45,12 @@ function readGroup(id) {
   try { return readFileSync(join(JOBS, id, 'group'), 'utf8').trim(); } catch { return ''; }
 }
 
+function withOpenedPrs(children, transcript) {
+  const known = new Set(children.map(c => c.href));
+  const extra = openedPrs(transcript).filter(href => !known.has(href)).map(href => ({kind: 'pr', href}));
+  return extra.length ? [...children, ...extra] : children;
+}
+
 export async function loadSessions() {
   // --all also returns completed sessions, which FleetView lists too.
   const all = JSON.parse(await run(CLAUDE, ['agents', '--json', '--all']));
@@ -62,7 +69,7 @@ export async function loadSessions() {
       detail: st.detail || '',
       intent: st.displayIntent || st.intent || '',
       tokens: st.tokens || 0,
-      children: st.children || [],
+      children: withOpenedPrs(st.children || [], st.linkScanPath || pastTranscriptPath(s.sessionId || st.sessionId)),
       updatedAt: st.updatedAt ? Date.parse(st.updatedAt) || st.updatedAt : s.startedAt,
       startedAt: s.startedAt,
       group: readGroup(s.id),
