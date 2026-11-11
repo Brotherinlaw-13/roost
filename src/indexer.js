@@ -8,13 +8,11 @@
 // appends what is new. Run on its own (roost spawns it in the background).
 
 import {readdirSync, statSync, mkdirSync, readFileSync, writeFileSync, renameSync, appendFileSync, rmSync, openSync, readSync, closeSync} from 'node:fs';
-import {homedir} from 'node:os';
 import {join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {statePath} from './config.js';
-const HOME = homedir();
-export const PROJECT = join(HOME, '.claude', 'projects', HOME.replace(/[/.]/g, '-'));
+import {statePath, projectDirs} from './config.js';
+export const PROJECTS = projectDirs;
 export const INDEX = statePath('search-index');
 const STATE = join(INDEX, 'state.json');
 
@@ -66,11 +64,13 @@ export async function updateIndex() {
   mkdirSync(INDEX, {recursive: true});
   const state = readState();
   let files;
-  try { files = readdirSync(PROJECT).filter(f => f.endsWith('.jsonl')); } catch { return 0; }
+  files = PROJECTS().flatMap(dir => {
+    try { return readdirSync(dir).filter(f => f.endsWith('.jsonl')).map(f => ({f, dir})); } catch { return []; }
+  });
   let touched = 0;
-  for (const f of files) {
+  for (const {f, dir} of files) {
     const id = f.slice(0, -6);
-    const path = join(PROJECT, f);
+    const path = join(dir, f);
     const size = statSync(path).size;
     const out = join(INDEX, `${id}.txt`);
     let from = state[id]?.offset || 0;

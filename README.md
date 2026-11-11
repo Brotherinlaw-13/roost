@@ -147,6 +147,7 @@ it; every key is optional and `"auto"` means "work it out".
 | `paneKey` | `""` | an extra key for the card pane besides `→`, e.g. `"ctrl+]"` |
 | `groups` | `"auto"` | where the list of groups is kept: roost's own store, or the `fleet-group` tools when installed |
 | `dispatchGroups` | `{}` | group for a session started from the pet, by issue type: `{"Bug": "Bugs", "*": "Working on"}` |
+| `launchDir` | `""` | folder new sessions start in, e.g. `"~/code"`; empty = your home folder. Claude Code asks to trust the home folder for every new background session, a project folder only once |
 | `launchPermissionMode` | `""` | permission mode for sessions roost starts or resumes, e.g. `"acceptEdits"`; empty = Claude Code asks as usual. ⚠️ With `"bypassPermissions"`, a ticket link dropped on the pet starts a session that acts on that ticket's text without asking: a ticket written with bad intent could make Claude run commands. Use it only if you trust every ticket you drop. |
 | `animations` | `true` | small animations, e.g. the card sliding into its pane |
 | `pet` | `false` | set by `roost pet` |

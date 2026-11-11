@@ -2,7 +2,7 @@ import {execFile, spawnSync} from 'node:child_process';
 import {execDetached} from './proc.js';
 export {freezeSession} from './attach.js';
 import {rawWrite, SYNC_ON} from './terminal.js';
-import {config, statePath, LEGACY_DIR} from './config.js';
+import {config, statePath, LEGACY_DIR, launchDir, projectDirs} from './config.js';
 import {readFileSync, writeFileSync, renameSync, existsSync, rmSync, readdirSync, statSync, openSync, readSync, closeSync} from 'node:fs';
 import {homedir, tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
@@ -10,7 +10,6 @@ import {fileURLToPath} from 'node:url';
 
 const HOME = homedir();
 const JOBS = join(HOME, '.claude', 'jobs');
-const PROJECTS = join(HOME, '.claude', 'projects');
 const TOOLS = join(HOME, '.claude', 'tools');
 const CLAUDE = process.env.ROOST_CLAUDE || 'claude';
 const WRAPPER = join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'attach-wrapper.sh');
@@ -163,7 +162,7 @@ async function launch(args, cwd, withTerminal) {
 }
 
 export async function dispatch(prompt, group, {withTerminal} = {}) {
-  const out = await launch(['--bg', ...launchFlags(), prompt], HOME, withTerminal);
+  const out = await launch(['--bg', ...launchFlags(), prompt], launchDir(), withTerminal);
   const id = parseId(out);
   if (id && group) await setGroup(id, group);
   return id;
@@ -171,7 +170,7 @@ export async function dispatch(prompt, group, {withTerminal} = {}) {
 
 export async function resume(sessionId, cwd, {withTerminal} = {}) {
   const out = await launch(['--bg', ...launchFlags(), '--resume', sessionId],
-    cwd && existsSync(cwd) ? cwd : HOME, withTerminal);
+    cwd && existsSync(cwd) ? cwd : launchDir(), withTerminal);
   return parseId(out);
 }
 
@@ -251,7 +250,6 @@ function latestTitles(tail) {
   return t;
 }
 
-const projectDir = dir => join(PROJECTS, dir.replace(/[/.]/g, '-'));
 
 export function transcriptTitle(path, sessionId) {
   const t = latestTitles(readRange(path, true, 128 * 1024));
@@ -264,17 +262,18 @@ export function transcriptTitle(path, sessionId) {
 // project (where sessions start), newest first, none that is already listed,
 // titled agent name > custom title > AI title > first prompt.
 export function loadPastSessions(listedSessionIds, limit = 200) {
-  const base = projectDir(HOME);
-  let names;
-  try { names = readdirSync(base); } catch { return []; }
   const files = [];
-  for (const f of names) {
-    if (!f.endsWith('.jsonl')) continue;
-    const sessionId = f.slice(0, -6);
-    if (listedSessionIds.has(sessionId)) continue;
-    const path = join(base, f);
-    const st = statSync(path);
-    if (st.size > 0) files.push({sessionId, path, mtime: st.mtimeMs});
+  for (const base of projectDirs()) {
+    let names;
+    try { names = readdirSync(base); } catch { continue; }
+    for (const f of names) {
+      if (!f.endsWith('.jsonl')) continue;
+      const sessionId = f.slice(0, -6);
+      if (listedSessionIds.has(sessionId)) continue;
+      const path = join(base, f);
+      const st = statSync(path);
+      if (st.size > 0) files.push({sessionId, path, mtime: st.mtimeMs});
+    }
   }
   files.sort((a, b) => b.mtime - a.mtime);
   return files.slice(0, limit).map(f => ({sessionId: f.sessionId, mtime: f.mtime, ...transcriptTitle(f.path, f.sessionId)}));
@@ -289,7 +288,8 @@ export function refreshIndex() {
 }
 
 export function pastTranscriptPath(sessionId) {
-  return join(projectDir(HOME), `${sessionId}.jsonl`);
+  const paths = projectDirs().map(d => join(d, `${sessionId}.jsonl`));
+  return paths.find(p => existsSync(p)) || paths[0];
 }
 
 // The session's recent steps: each change of what it said it was doing.

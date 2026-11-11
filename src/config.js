@@ -59,6 +59,9 @@ export const DEFAULTS = {
   pet: false,
   // When a session opens from a launch link (roost pet), the group it goes in by issue type: {"Bug": "Bugs", "*": "Working on"}.
   dispatchGroups: {},
+  // Folder new sessions start in; empty = your home folder. Claude Code asks
+  // to trust the home folder for every new session, a project folder once.
+  launchDir: '',
   // Permission mode for sessions roost starts or resumes, e.g. 'acceptEdits' or
   // 'bypassPermissions'; empty = Claude Code's own default (it asks).
   launchPermissionMode: '',
@@ -119,6 +122,18 @@ export function saveConfig(values) {
 }
 
 export const readConfigFile = () => readJson(CONFIG_FILE);
+
+export function launchDir() {
+  const dir = String(config().launchDir || '').replace(/^~(?=\/|$)/, HOME);
+  return dir && existsSync(dir) ? dir : HOME;
+}
+
+// Claude Code keeps each folder's conversations in its own project folder;
+// sessions live in the home folder and in the launch folder.
+export function projectDirs() {
+  const slug = dir => join(HOME, '.claude', 'projects', dir.replace(/[/.]/g, '-'));
+  return [...new Set([slug(HOME), slug(launchDir())])];
+}
 
 // Changes one setting in config.json, keeping the others.
 export function setConfigValue(key, value) {

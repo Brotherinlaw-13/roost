@@ -1,13 +1,11 @@
 import {execDetached} from './proc.js';
-import {statePath} from './config.js';
+import {statePath, projectDirs} from './config.js';
 import {realpathSync, statSync} from 'node:fs';
-import {homedir} from 'node:os';
 import {join, basename} from 'node:path';
 import {sessionTickets} from './tickets.js';
 
-const HOME = homedir();
 const INDEX = statePath('search-index');
-const PROJECT = join(HOME, '.claude', 'projects', HOME.replace(/[/.]/g, '-'));
+
 const MAX_FILES = 40;
 const SNIPPET = 90;
 
@@ -57,7 +55,11 @@ export async function searchTranscripts(query) {
   }
   // Age and order come from the conversation itself, not from its index file
   // (rebuilt at once on the first run).
-  const lastActive = f => { try { return statSync(join(PROJECT, `${basename(f, '.txt')}.jsonl`)).mtimeMs; } catch { return statSync(f).mtimeMs; } };
+  const dirs = projectDirs();
+  const lastActive = f => {
+    for (const d of dirs) { try { return statSync(join(d, `${basename(f, '.txt')}.jsonl`)).mtimeMs; } catch {} }
+    return statSync(f).mtimeMs;
+  };
   const ranked = [...files].map(f => ({f, mtime: lastActive(f)})).sort((a, b) => b.mtime - a.mtime).slice(0, MAX_FILES);
   const out = await rg(['--json', '-i', '-F', '-m', '60', terms[0], ...ranked.map(r => r.f)]);
   // Per conversation, prefer a message holding every term.
