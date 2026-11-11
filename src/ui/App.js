@@ -455,9 +455,13 @@ export function App({services, initial = {}}) {
   // A launch that needs a person (Claude Code's trust prompt) gets the
   // terminal: roost stops reading keys and painting until it returns.
   const [handingOver, setHandingOver] = useState(false);
+  // Ink turns raw mode off once it stops reading keys; that must happen
+  // before the prompt takes the keyboard, or keys arrive a line at a time
+  // (arrows echoed as ^[[B, never reaching the prompt). Hence the short wait.
   const withTerminal = async work => {
     setHandingOver(true);
     suspendOutput();
+    await new Promise(res => setTimeout(res, 60));
     try { return await work(); } finally { setHandingOver(false); resumeOutput(); }
   };
 

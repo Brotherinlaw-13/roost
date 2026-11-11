@@ -216,10 +216,13 @@ export function runInteractive(pty, cmd, args, {env, cwd, stdin = process.stdin,
     const onKey = d => p.write(d.toString());
     const onResize = () => p.resize(stdout.columns || 120, stdout.rows || 40);
     stdin.setRawMode?.(true);
+    // Again a moment later, in case something turned it off meanwhile.
+    const raw = setTimeout(() => stdin.setRawMode?.(true), 150);
     stdin.on('data', onKey);
     stdin.resume();
     stdout.on('resize', onResize);
     p.onExit(({exitCode}) => {
+      clearTimeout(raw);
       stdin.removeListener('data', onKey);
       stdin.pause();
       stdout.removeListener('resize', onResize);
